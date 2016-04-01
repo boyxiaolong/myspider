@@ -10,7 +10,7 @@ from threading import Timer
 from utils import HtmlAnalyzer
 
 class Strategy(object):
-    def __init__(self,max_depth, max_count, concurrency=10):
+    def __init__(self,max_depth, max_count, concurrency=5):
         self.max_depth = max_depth
         self.max_count = max_count
         self.concurrency = concurrency
@@ -31,17 +31,13 @@ class GeventSpider(object):
         self.url_set = set()
         obj = UrlObj(root_url, 0)
         self.put(obj)
-        self.url_num = 0
+        self.handle_num = 0
 
     def put(self, obj):
         hash_val = hash(obj.url)
         if hash_val not in self.url_set:
             self.url_set.add(hash_val)
             self.queue.put(obj)
-            if len(self.url_set) == self.strategy.max_count:
-                print 'maxcount %d fit so stop' %self.strategy.max_count
-                self.stop()
-
 
     def _run_loop(self):
         while self.timer.isAlive():
@@ -55,7 +51,8 @@ class GeventSpider(object):
 
             greenlet = Handler(url, self)
             self.pool.start(greenlet)
-            self.url_num = self.url_num + 1
+            self.handle_num = self.handle_num+1
+            self.check_if_need_stop()
 
     def run(self):
         self.timer = Timer(self.strategy.time, self.stop)
@@ -65,9 +62,12 @@ class GeventSpider(object):
     def stop(self):
         self.timer.cancel()
         self.pool.join()
-        self.queue.put(StopIteration)
         return
 
+    def check_if_need_stop(self):
+        if self.strategy.max_count <= self.handle_num:
+            print 'handle_num %d is full' %self.handle_num
+            self.stop()
 
 class Handler(gevent.Greenlet):
     def __init__(self, urlobj, spider):
@@ -119,5 +119,5 @@ class MySpider(object):
     def run(self):
         self.spider.run()
 
-test = MySpider(max_depth=20, max_count=30, root_url="http://www.douban.com")
+test = MySpider(max_depth=20, max_count=20, root_url="http://www.douban.com")
 test.run()

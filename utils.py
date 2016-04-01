@@ -5,21 +5,15 @@ import re
 import urllib
 import urlparse
 from pyquery import PyQuery
-import domain
-import os.path
 
 class HtmlAnalyzer(object):
 
     @staticmethod
     def detectCharSet(html):
-
         pq = PyQuery(html)
-
         metas = pq('head')('meta')
-
         for meta in metas:
             for key in meta.keys():
-                #print "key ", key
                 if key == "charset":
                     charset = meta.get('charset')
                     return charset
@@ -34,7 +28,6 @@ class HtmlAnalyzer(object):
 
     @staticmethod
     def extractLinks(html, baseurl, charset):
-
         def _extract(url, attr):
             link = url.attrib[attr]
             link = link.strip("/ ").strip('\\"')
