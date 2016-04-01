@@ -30,20 +30,8 @@ class UrlObj(object):
         self.depth = depth
         self.linkin = linkin
 
-    def __str__(self):
-        return self.url
-
-    def __repr__(self):
-        return "<Url object: %s>" % self.url
-
     def __hash__(self):
         return hash(self.url)
-
-    def setLinkin(self, urlobj):
-        self.linkin = urlobj
-
-    def incrDepth(self):
-        self.depth += 1
 
 
 class UrlTable(object):
@@ -93,7 +81,7 @@ class GeventSpider(object):
         self.setRootUrl(root_url)
 
     def setRootUrl(self,url):
-        if isinstance(url,basestring):
+        if isinstance(url, basestring):
             url = UrlObj(url)
         self.root = url
         self.put(self.root)
@@ -213,5 +201,5 @@ class MySpider(object):
     def run(self):
         self.spider.run()
 
-test = MySpider(10, 5000, "http://www.douban.com")
+test = MySpider(max_depth=10, max_count=5000, root_url="http://www.douban.com")
 test.run()
