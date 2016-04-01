@@ -16,10 +16,6 @@ from pyquery import PyQuery
 from utils import HtmlAnalyzer, UrlFilter
 
 
-__all__ = ['Strategy', 'UrlObj', 'Spider', 'HtmlAnalyzer', 'UrlFilter']
-
-
-
 class Strategy(object):
 
     default_cookies = {}
@@ -109,9 +105,6 @@ class UrlTable(object):
 
 
 class Spider(object):
-
-    logger = logging.getLogger("spider.mainthread")
-
     def __init__(self,strategy=Strategy()):
         monkey.patch_all()
         self.strategy = strategy
@@ -176,9 +169,6 @@ class Spider(object):
 
 
 class Handler(gevent.Greenlet):
-
-    logger = logging.getLogger("spider.handler")
-
     def __init__(self, urlobj, spider):
         gevent.Greenlet.__init__(self)
         self.urlobj = urlobj
@@ -193,7 +183,6 @@ class Handler(gevent.Greenlet):
         try:
             html = self.open(self.urlobj.url)
         except Exception, why:
-            self.logger.debug("open '%s' failed,since : %s", self.urlobj, why)
             return self.stop()
 
         linkin = self.urlobj
@@ -220,9 +209,6 @@ class Handler(gevent.Greenlet):
             url = UrlObj(link, depth, linkin)
             urltable.insert(url)
             queue.put(url)
-
-            self.logger.debug(
-                "sucess crawled '%s' the <%d> urls", url, len(urltable))
 
         self.stop()
 
