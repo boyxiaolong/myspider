@@ -150,7 +150,6 @@ class Spider(object):
         return self._stop.is_set()
 
     def stop(self):
-        self.logger.info("spider '%s' finished. fetch total (%d) urls",self.root,len(self.urltable))
         self.timer.cancel()
         self._stop.set()
         self.pool.join()
