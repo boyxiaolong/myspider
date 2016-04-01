@@ -37,16 +37,13 @@ class GeventSpider(object):
         if obj.url not in self.url_set:
             self.url_set.add(hash(obj.url))
             self.queue.put(obj)
-
-    def run(self):
-        self.timer = Timer(self.strategy.time, self.stop)
-        self.timer.start()
-
-        while self.timer.isAlive():
-            if self.url_num >= self.strategy.max_count:
-                print 'need stop'
+            if len(self.url_set) == self.strategy.max_count:
+                print 'maxcount %d fit so stop' %self.strategy.max_count
                 self.stop()
-                return
+
+
+    def _run_loop(self):
+        while self.timer.isAlive():
             for greenlet in list(self.pool):
                 if greenlet.dead:
                     self.pool.discard(greenlet)
@@ -57,8 +54,12 @@ class GeventSpider(object):
 
             greenlet = Handler(url, self)
             self.pool.start(greenlet)
-            self.url_num = self.url_num+1
+            self.url_num = self.url_num + 1
 
+    def run(self):
+        self.timer = Timer(self.strategy.time, self.stop)
+        self.timer.start()
+        self._run_loop()
 
     def stop(self):
         self.timer.cancel()
@@ -76,9 +77,6 @@ class Handler(gevent.Greenlet):
         self.charset = "utf-8"
 
     def _run(self):
-        strategy = self.spider.strategy
-        urltable = self.spider.url_set
-
         try:
             html = self.open(self.urlobj.url)
         except Exception, why:
@@ -86,11 +84,11 @@ class Handler(gevent.Greenlet):
 
         depth = self.urlobj.depth + 1
 
-        if strategy.max_depth and (depth > strategy.max_depth):
+        if depth > self.spider.strategy.max_depth:
             return
 
         for link in self.feed(html):
-            if hash(link) in urltable:
+            if hash(link) in self.spider.url_set:
                 continue
             url = UrlObj(link, depth)
             self.spider.put(url)
