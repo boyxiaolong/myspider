@@ -37,7 +37,7 @@ class GeventSpider(object):
 
     def put(self, obj):
         if obj.url not in self.url_set:
-            self.url_set.add(obj.url)
+            self.url_set.add(hash(obj.url))
             self.queue.put(obj)
 
     def run(self):
@@ -99,7 +99,7 @@ class Handler(gevent.Greenlet):
             return self.stop()
 
         for link in self.feed(html):
-            if link in urltable:
+            if hash(link) in urltable:
                 continue
             url = UrlObj(link, depth)
             self.spider.put(url)
