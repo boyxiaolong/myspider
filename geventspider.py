@@ -17,35 +17,27 @@ from utils import HtmlAnalyzer, UrlFilter
 
 
 class Strategy(object):
-
     default_cookies = {}
-
     default_headers = {
-        'User-Agent': 'SinaSec Webscan Spider',
+        'User-Agent': 'DoubanSec Webscan Spider',
         'Accept': 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Cache-Control': 'max-age=0',
         'Accept-Charset': 'GBK,utf-8;q=0.7,*;q=0.3',
     }
 
-
-    def __init__(self,max_depth=5,max_count=5000,concurrency=5,timeout=10,time=6*3600,headers=None,
-                 cookies=None,ssl_verify=False,same_host=False,same_domain=True):
+    def __init__(self,max_depth=5,max_count=5000,concurrency=5,timeout=10,time=6*3600):
         self.max_depth = max_depth
         self.max_count = max_count
         self.concurrency = concurrency
         self.timeout = timeout
         self.time = time
         self.headers = self.default_headers
-        self.headers.update(headers or {})
+        self.headers.update({})
         self.cookies = self.default_cookies
-        self.cookies.update(cookies or {})
-        self.ssl_verify = ssl_verify
-        self.same_host = same_host
-        self.same_domain = same_domain
+        self.cookies.update({})
 
 
 class UrlObj(object):
-
     def __init__(self, url, depth=0, linkin=None):
         if not url.startswith("http"):
             url = "http://" + url
@@ -70,7 +62,6 @@ class UrlObj(object):
 
 
 class UrlTable(object):
-
     infinite = float("inf")
 
     def __init__(self, size=0):
@@ -104,8 +95,8 @@ class UrlTable(object):
         return len(self) >= self.size
 
 
-class Spider(object):
-    def __init__(self,strategy=Strategy()):
+class GeventSpider(object):
+    def __init__(self,strategy, root_url):
         monkey.patch_all()
         self.strategy = strategy
         self.queue = queue.Queue()
@@ -113,7 +104,7 @@ class Spider(object):
         self.pool = pool.Pool(strategy.concurrency)
         self.greenlet_finished = event.Event()
         self._stop = event.Event()
-
+        self.setRootUrl(root_url)
 
     def setRootUrl(self,url):
         if isinstance(url,basestring):
@@ -143,6 +134,7 @@ class Spider(object):
                     continue
                 else:
                     self.stop()
+            print url
             greenlet = Handler(url, self)
             self.pool.start(greenlet)
 
@@ -199,12 +191,6 @@ class Handler(gevent.Greenlet):
             if link in urltable:
                 continue
 
-            if strategy.same_host and (not UrlFilter.isSameHost(link,linkin.url)):
-                continue
-
-            if strategy.same_domain and (not UrlFilter.isSameDomain(link, linkin.url)):
-                continue
-
             url = UrlObj(link, depth, linkin)
             urltable.insert(url)
             queue.put(url)
@@ -215,8 +201,8 @@ class Handler(gevent.Greenlet):
         strategy = self.spider.strategy
         try:
             resp = requests.get(url, headers=strategy.headers,
-                                cookies=strategy.cookies, timeout=strategy.timeout,
-                                verify=strategy.ssl_verify)
+                                cookies=strategy.cookies, timeout=strategy.timeout)
+                                #, verify=strategy.ssl_verify*/)
         except requests.exceptions.RequestException, e:
             raise e
         if resp.status_code != requests.codes.ok:
@@ -237,15 +223,11 @@ class Handler(gevent.Greenlet):
 
 
 class MySpider(object):
-    def setUp(self):
-        self.root = "http://www.sina.com.cn"
-        strategy = Strategy(max_depth=3, max_count=5000,
-                            same_host=False, same_domain=True)
-        self.spider = Spider(strategy)
-        self.spider.setRootUrl(self.root)
+    def __init__(self, root_url):
+        strategy = Strategy(max_depth=10, max_count=5000)
+        self.spider = GeventSpider(strategy, root_url)
+
+    def run(self):
         self.spider.run()
-
-
-
-test = MySpider()
-test.setUp()
+test = MySpider("http://www.douban.com")
+test.run()
