@@ -34,8 +34,9 @@ class GeventSpider(object):
         self.url_num = 0
 
     def put(self, obj):
-        if obj.url not in self.url_set:
-            self.url_set.add(hash(obj.url))
+        hash_val = hash(obj.url)
+        if hash_val not in self.url_set:
+            self.url_set.add(hash_val)
             self.queue.put(obj)
             if len(self.url_set) == self.strategy.max_count:
                 print 'maxcount %d fit so stop' %self.strategy.max_count
