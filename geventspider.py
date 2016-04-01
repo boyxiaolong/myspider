@@ -82,12 +82,12 @@ class Handler(gevent.Greenlet):
         try:
             html = self.open(self.urlobj.url)
         except Exception, why:
-            return self.stop()
+            return
 
         depth = self.urlobj.depth + 1
 
         if strategy.max_depth and (depth > strategy.max_depth):
-            return self.stop()
+            return
 
         for link in self.feed(html):
             if hash(link) in urltable:
