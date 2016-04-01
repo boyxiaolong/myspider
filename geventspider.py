@@ -28,8 +28,6 @@ class GeventSpider(object):
         self.strategy = Strategy(max_depth, max_count)
         self.queue = queue.Queue()
         self.pool = pool.Pool(self.strategy.concurrency)
-        self.greenlet_finished = event.Event()
-        self._stop = event.Event()
         self.url_set = set()
         obj = UrlObj(root_url, 0)
         self.put(obj)
@@ -44,7 +42,7 @@ class GeventSpider(object):
         self.timer = Timer(self.strategy.time, self.stop)
         self.timer.start()
 
-        while not self.stopped() and self.timer.isAlive():
+        while self.timer.isAlive():
             if self.url_num >= self.strategy.max_count:
                 print 'need stop'
                 self.stop()
@@ -53,24 +51,17 @@ class GeventSpider(object):
                 if greenlet.dead:
                     self.pool.discard(greenlet)
             try:
-                url = self.queue.get_nowait()
+                url = self.queue.get()
             except queue.Empty:
-                if self.pool.free_count() != self.pool.size:
-                    self.greenlet_finished.wait()
-                    self.greenlet_finished.clear()
-                    continue
-                else:
-                    self.stop()
+                continue
+
             greenlet = Handler(url, self)
             self.pool.start(greenlet)
             self.url_num = self.url_num+1
 
-    def stopped(self):
-        return self._stop.is_set()
 
     def stop(self):
         self.timer.cancel()
-        self._stop.set()
         self.pool.join()
         self.queue.put(StopIteration)
         return
@@ -124,7 +115,6 @@ class Handler(gevent.Greenlet):
         return HtmlAnalyzer.extractLinks(html,self.urlobj.url,self.charset)
 
     def stop(self):
-        self.spider.greenlet_finished.set()
         self.kill(block=False)
 
 
