@@ -119,5 +119,5 @@ class MySpider(object):
     def run(self):
         self.spider.run()
 
-test = MySpider(max_depth=20, max_count=20, root_url="http://www.douban.com")
+test = MySpider(max_depth=20, max_count=100, root_url="http://www.maiziedu.com")
 test.run()
