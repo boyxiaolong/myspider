@@ -27,8 +27,6 @@ class GeventSpider(object):
         self.strategy = Strategy(max_depth, max_count)
         self.queue = Queue()
         self.url_set = set()
-        obj = UrlObj(root_url, 0)
-        self.put(obj)
         self.handle_num = 0
         self.lock = Lock()
         self.thread_lock = Lock()
@@ -38,12 +36,18 @@ class GeventSpider(object):
         self.thread_num = 0
         self.currency_limit = False
         self.last_data = None
+        obj = UrlObj(root_url, 0)
+        self.put(obj)
 
     def put(self, obj):
         hash_val = hash(obj.url)
-        if hash_val not in self.url_set:
-            self.url_set.add(hash_val)
-            self.queue.put(obj)
+        self.lock.acquire()
+        res = hash_val in self.url_set
+        self.lock.release()
+        if res:
+            return
+        self.url_set.add(hash_val)
+        self.queue.put(obj)
 
     def _run_loop(self):
         while True:
@@ -97,12 +101,6 @@ class GeventSpider(object):
             print 'handle_num %d is full' % self.handle_num
             self.stop()
 
-    def is_dup_url(self, url):
-        hash_val = hash(url)
-        self.lock.acquire()
-        res = hash_val in self.url_set
-        self.lock.release()
-        return res
     def remove_thread(self, thd_id):
         self.thread_lock.acquire()
         if thd_id in self.threadpool:
@@ -131,8 +129,6 @@ class Handler(Thread):
             return
 
         for link in self.feed(html):
-            if self.spider.is_dup_url(link):
-                continue
             url = UrlObj(link, depth)
             self.spider.put(url)
         self.spider.remove_thread(self.thread_id)
