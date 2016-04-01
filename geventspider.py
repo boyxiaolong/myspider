@@ -95,8 +95,6 @@ class Handler(gevent.Greenlet):
             url = UrlObj(link, depth)
             self.spider.put(url)
 
-        self.stop()
-
     def open(self, url):
         strategy = self.spider.strategy
         try:
@@ -113,9 +111,6 @@ class Handler(gevent.Greenlet):
 
     def feed(self,html):
         return HtmlAnalyzer.extractLinks(html,self.urlobj.url,self.charset)
-
-    def stop(self):
-        self.kill(block=False)
 
 
 class MySpider(object):
